@@ -2,6 +2,7 @@
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
 #include "NeoPatterns.h"
+#include "main_html.h"
 
 void onComplete();
 
@@ -53,8 +54,9 @@ void onComplete() {
   neopixels.reverse();
 }
 
-void handleHelp() {
-  this_server.send(200, "text/plain", "/R=Red, /G=Green, /B=Blue, /W=White Scanner, /X=Rainbow, /Y= Rainbow Cycle, /Z=Chaser Rainbow, /set=RGB");
+void handleRoot() {
+  String page = main_html;
+  this_server.send(200, "text/html", page);
 }
 
 void returnFail(String msg) {
@@ -85,54 +87,39 @@ void handleRGB() {
 // --- configure handler for server   ----------------------------------------
 
 void configureServer() {
-  this_server.on("/", handleHelp);
-  this_server.on("/help", handleHelp);
+  this_server.on("/", handleRoot);
   this_server.on("/set", handleRGB);
 
   this_server.on("/R", []() {
-    this_server.send(200, "text/plain", "Red");
+    this_server.send(200);
     Serial.println("Red");
     neopixels.initColorWipe(neopixels.Color(255,0,0),50);
   });
 
   this_server.on("/G", []() {
-    this_server.send(200, "text/plain", "Green");
+    this_server.send(200);
     Serial.println("Green");
     neopixels.initColorWipe(neopixels.Color(0,255,0),50);
   });
 
 
   this_server.on("/B", []() {
-    this_server.send(200, "text/plain", "Blue");
+    this_server.send(200);
     Serial.println("Blue");
     neopixels.initColorWipe(neopixels.Color(0,0,255),50);
   });
 
 
   this_server.on("/W", []() {
-    this_server.send(200, "text/plain",  "White Scanner");
-    Serial.println("White Scanner");
-
-    neopixels.initScanner(neopixels.Color(255, 255, 255), 30); // White
-  });
-
-  this_server.on("/X", []() {
-    this_server.send(200, "text/plain",  "Rainbow");
-
-    Serial.println("Rainbow");
-    neopixels.initRainbowCycle(20);
+    this_server.send(200);
+    Serial.println("White");
+    neopixels.initColorWipe(neopixels.Color(255, 255, 255), 80);
   });
 
   this_server.on("/Y", []() {
-    this_server.send(200, "text/plain",  "Rainbow Cycle");
+    this_server.send(200);
     Serial.println("Rainbow Cycle");
-    neopixels.initRainbowCycle(10);
-  });
-
-  this_server.on("/Z", []() {
-    this_server.send(200, "text/plain",  "Chaser Rainbow");
-    Serial.println("Chaser Rainbow");
-    neopixels.initRainbowCycle(50);
+    neopixels.initRainbowCycle(100);
   });
 }
 
@@ -152,8 +139,14 @@ void setup(void) {
   Serial.println(ssid);
   neopixels.initColorWipe(neopixels.Color(0, 255, 0), 50); // Green
 
+#ifdef STATIC_IP
+  IPAddress staticIP(STATIC_IP);
+  IPAddress gateway(GATEWAY_IP);
+  IPAddress subnet(SUBNET);
+  IPAddress dns(DNS_IP);
+  WiFi.config(staticIP,subnet,gateway,dns);
+#endif
   WiFi.begin(ssid, password);
-
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -168,6 +161,8 @@ void setup(void) {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   neopixels.initRainbowCycle(16);
+
+  configureServer();
   this_server.begin();
 }
 
